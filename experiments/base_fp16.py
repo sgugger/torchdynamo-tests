@@ -46,7 +46,7 @@ The Hugging Face Hub is a platform where users can share pretrained datasets, mo
 def parse_args():
     parser = argparse.ArgumentParser(description="Finetune a transformers model on a tiny corpus for masked LM")
     parser.add_argument("--model_name", type=str, default="bert-base-cased")
-    parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_batches", type=int, default=100)
 
     args = parser.parse_args()
