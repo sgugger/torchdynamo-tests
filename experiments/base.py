@@ -2,7 +2,6 @@ import argparse
 import random
 import time
 import torch
-import torch._dynamo as dynamo
 from torch.optim import AdamW
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 
@@ -75,6 +74,9 @@ class DataLoader():
 
 
             yield {"input_ids": torch.tensor(masked_samples), "labels": torch.tensor(samples)}
+    
+    def __len__(self):
+        return self.num_batches
 
 
 def main():
@@ -87,31 +89,22 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device).train()
 
-    model = dynamo.optimize("inductor")(model)
-
-    iter_times = []
+    start_time = time.time()
     for step, batch in enumerate(train_dl):
-        start = time.time()
         batch = {k: v.to(device) for k, v in batch.items()}
-        with torch.cuda.amp.autocast():
-            output = model(**batch)
+        output = model(**batch)
         loss = output.loss
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        end = time.time()
-
         if step == 0:
-            print(f"First step {end-start:2f}s")
-        else:
-            iter_times.append(end-start)
-    
-    print(f"Average step time: {sum(iter_times) / len(iter_times):2f}s")
+            first_step_time = time.time() - start_time
 
-
-
-
-
+    total_training_time = time.time() - start_time
+    avg_iteration_time = (total_training_time - first_step_time) / (len(train_dl) - 1)
+    print("Training finished.")
+    print(f"First iteration took: {first_step_time:.2f}s")
+    print(f"Average time after the first iteration: {avg_iteration_time * 1000:.2f}ms")
 
 if __name__ == "__main__":
     main()
