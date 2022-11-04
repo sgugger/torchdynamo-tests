@@ -36,4 +36,4 @@ Dynamic
 | Script | FP32 | FP16 |
 |:--|:-:|:-:|
 | dynamic | 59.23ms | 63.53ms |
-| dyanmic_optimized | 38.20ms | 29.85ms |
+| dyanmic_optimized | OOM? | OOM? |
