@@ -5,6 +5,7 @@ Repo to test torchdynamo
 This folder contains quick reproducers to observe different behaviors. The base scripts give a benchmark without any optimization. Then we can observe what happens when optimizing different things. This table regroups the average iteration time (alle executed on an A100):
 
 | Script | FP32 | FP16 |
+|:--|:-:|:-:|
 | base | 62.67ms | 59.68ms |
 | optimize_model | 61.54ms | 23.80ms |
 | optimize_forward | 61.84ms | 29.34ms |
