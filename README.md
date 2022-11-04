@@ -31,3 +31,9 @@ Using torchdynamo to optimize the train step does not really work lots of warnin
 
 Reproducer: `python experiments/optimize_train_step_fp16.py`
 
+Dynamic
+
+| Script | FP32 | FP16 |
+|:--|:-:|:-:|
+| dynamic | 59.23ms | 63.53ms |
+| dyanmic_optimized | 38.20ms | 29.85ms |
