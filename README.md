@@ -8,18 +8,18 @@ Batch size 16:
 
 | Script | FP32 | FP16 |
 |:--|:-:|:-:|
-| base | 105.74ms | 62.24ms |
-| optimize_model | 104.70ms | 29.85ms |
-| optimize_forward | 104.73ms | 29.49ms |
+| base | 54.44ms | 62.24ms |
+| optimize_model | 38.20ms | 29.85ms |
+| optimize_forward | 38.36ms | 29.49ms |
 | train_step | x | x |
 
 Batch size 8:
 
 | Script | FP32 | FP16 |
 |:--|:-:|:-:|
-| base | 62.67ms | 59.68ms |
-| optimize_model | 61.54ms | 23.80ms |
-| optimize_forward | 61.84ms | 29.34ms |
+| base | 53.47ms | 59.68ms |
+| optimize_model | 28.34ms | 23.80ms |
+| optimize_forward | 28.16ms | 29.34ms |
 | train_step | 1754.47ms | 1740.21ms |
 
 Using torchdynamo to optimize the train step does not really work lots of warning like this and the times are not right:

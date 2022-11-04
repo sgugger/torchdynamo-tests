@@ -43,6 +43,8 @@ The Hugging Face Hub is a platform where users can share pretrained datasets, mo
 
 """
 
+torch.backends.cuda.matmul.allow_tf32 = True
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Finetune a transformers model on a tiny corpus for masked LM")
     parser.add_argument("--model_name", type=str, default="bert-base-cased")
