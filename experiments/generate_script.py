@@ -6,6 +6,7 @@ import torch
 from accelerate import Accelerator
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def parse_args():
