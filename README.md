@@ -1,5 +1,7 @@
 Repo to test torchdynamo
 
+`pip install -r requirements.txt`
+
 ## Experiments
 
 This folder contains quick reproducers to observe different behaviors. The base scripts give a benchmark without any optimization. Then we can observe what happens when optimizing different things. This table regroups the average iteration time (alle executed on an A100):
