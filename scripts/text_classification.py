@@ -36,6 +36,7 @@ from transformers import (
 )
 
 
+torch.backends.cuda.matmul.allow_tf32 = True
 logger = get_logger(__name__)
 
 task_to_keys = {
