@@ -37,3 +37,22 @@ Dynamic
 |:--|:-:|:-:|
 | dynamic | 59.23ms | 63.53ms |
 | dyanmic_optimized | OOM? | OOM? |
+
+## Scripts
+
+### Text classification
+
+Iteration avg time for training/evaluation (excluding the first) when fine-tuning BERT on MRPC. Final results of the models are within the variance of fine-tuning, no particular performance drop observed except for FP16 + torchdynamo which seems to underperform a bit (more like 82%-84% accuracy compared to 86%-87% for other tests and 0.86/0.87 F1 score instead of 0.89/0.90).
+
+| Dynamo | FP32 | FP16 |
+|:--|:-:|:-:|
+| no | 57.9ms/15.65ms | 65.87ms/18.52ms |
+| inductor | 36.24ms/10.55ms | 39.43ms/9.09ms |
+
+To reproduce:
+
+```bash
+accelerate launch --config_file configs/base_fp32.yaml scripts/text_classification.py --task_name mrpc
+```
+
+and change the config file to one of the four options in `configs` to get the four squares.
