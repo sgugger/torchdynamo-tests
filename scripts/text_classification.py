@@ -35,7 +35,6 @@ from transformers import (
     get_scheduler,
 )
 
-
 torch.backends.cuda.matmul.allow_tf32 = True
 logger = get_logger(__name__)
 
@@ -93,6 +92,14 @@ def parse_args():
         default=3,
         help="Number of training epochs.",
     )
+
+    parser.add_argument(
+        "--dynamo_backend",
+        type=str,
+        default="no",
+        help="Dynamo backend" 
+    )
+
     args = parser.parse_args()
     return args
 
@@ -100,7 +107,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    accelerator = Accelerator()
+    accelerator = Accelerator(dynamo_backend=args.dynamo_backend)
 
     # Make one log on every process with the configuration for debugging.
     logging.basicConfig(
