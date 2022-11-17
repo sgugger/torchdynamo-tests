@@ -1,5 +1,5 @@
 transformers
 datasets
 evaluate
-scikit-learn    
+scikit-learn
 git+https://github.com/huggingface/accelerate@main
