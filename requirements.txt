@@ -1,0 +1,4 @@
+transformers
+datasets
+evaluate    
+git+https://github.com/huggingface/accelerate@main
