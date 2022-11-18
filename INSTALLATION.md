@@ -55,7 +55,8 @@ sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda
 sudo add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
 ```
 
-Install cuda toolkit
+Install cuda toolkit. 
+If you want to use conda setup, please refer the corresponding section and skip below steps.
 
 ```bash
 sudo apt update
@@ -119,4 +120,35 @@ Install nightlies with dynamo
 ```bash
 pip install numpy
 pip install --pre torch[dynamo] --extra-index-url https://download.pytorch.org/whl/nightly/cu117/
+```
+
+# Conda Installation instructions
+
+1. Install miniconda
+```bash
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+```
+
+2. Create conda python env and then activate it
+```bash
+conda create --name dynamo python
+conda activate dynamo
+```
+
+3. Install cudatoolkit-11.7. Please refer [cuda-toolkit](https://anaconda.org/nvidia/cuda-toolkit)
+for more information
+```bash
+conda install -c "nvidia/label/cuda-11.7.0" cuda-toolkit
+```
+
+4. Install PyTorch along with Torch Dynamo dependencies
+```bash
+pip install numpy
+pip install --pre torch[dynamo] --extra-index-url https://download.pytorch.org/whl/nightly/cu117/
+```
+
+5. Verify torch-dynamo with below command assuming you are in the top folder
+```
+python tools/verify_dynamo.py
 ```
