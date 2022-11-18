@@ -142,7 +142,13 @@ for more information
 conda install -c "nvidia/label/cuda-11.7.0" cuda-toolkit
 ```
 
-4. Verify torch-dynamo with below command assuming you are in the top folder
+4. Install PyTorch along with Torch Dynamo dependencies
+```bash
+pip install numpy
+pip install --pre torch[dynamo] --extra-index-url https://download.pytorch.org/whl/nightly/cu117/
+```
+
+5. Verify torch-dynamo with below command assuming you are in the top folder
 ```
 python tools/verify_dynamo.py
 ```
