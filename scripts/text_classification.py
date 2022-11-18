@@ -93,13 +93,6 @@ def parse_args():
         help="Number of training epochs.",
     )
 
-    parser.add_argument(
-        "--dynamo_backend",
-        type=str,
-        default="no",
-        help="Dynamo backend" 
-    )
-
     args = parser.parse_args()
     return args
 
@@ -107,7 +100,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    accelerator = Accelerator(dynamo_backend=args.dynamo_backend)
+    accelerator = Accelerator()
 
     # Make one log on every process with the configuration for debugging.
     logging.basicConfig(
@@ -170,7 +163,9 @@ def main():
     train_dataloader = DataLoader(
         train_dataset, shuffle=True, collate_fn=data_collator, batch_size=args.batch_size, drop_last=True
     )
-    eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.batch_size, drop_last=not args.dynamic_length)
+    eval_dataloader = DataLoader(
+        eval_dataset, collate_fn=data_collator, batch_size=args.batch_size, drop_last=not args.dynamic_length
+    )
 
     # Optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
@@ -235,6 +230,7 @@ def main():
 
     eval_metric = metric.compute()
     print(f"Result: {eval_metric}")
+
 
 if __name__ == "__main__":
     main()
