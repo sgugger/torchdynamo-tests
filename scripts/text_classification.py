@@ -100,13 +100,20 @@ def parse_args():
         help="Dynamo backend" 
     )
 
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="random seed for torch"
+    )
+
     args = parser.parse_args()
     return args
 
 
 def main():
     args = parse_args()
-
+    torch.manual_seed(args.seed)
     accelerator = Accelerator(dynamo_backend=args.dynamo_backend)
 
     # Make one log on every process with the configuration for debugging.
@@ -189,8 +196,8 @@ def main():
     )
 
     # Get the metric function
-    metric = evaluate.load("glue", args.task_name)
-
+    train_metric = evaluate.load("glue", args.task_name)
+    test_metric = evaluate.load("glue", args.task_name)
     # Train!
     # Only show the progress bar once on each machine.
     train_steps = len(train_dataloader) * args.num_epochs
@@ -202,6 +209,8 @@ def main():
             # We need to skip steps until we reach the resumed step
             outputs = model(**batch)
             loss = outputs.loss
+            predictions, references = accelerator.gather_for_metrics((outputs.logits.argmax(dim=-1), batch["labels"]))
+            train_metric.add_batch(predictions=predictions, references=references)
             accelerator.backward(loss)
             optimizer.step()
             lr_scheduler.step()
@@ -209,12 +218,14 @@ def main():
             progress_bar.update(1)
             if step == 0 and epoch == 0:
                 first_step_time = time.time() - start_time
-
+    
     total_training_time = time.time() - start_time
     avg_iteration_time = (total_training_time - first_step_time) / (train_steps - 1)
     print("Training finished.")
     print(f"First iteration took: {first_step_time:.2f}s")
     print(f"Average time after the first iteration: {avg_iteration_time * 1000:.2f}ms")
+    eval_train_metric = train_metric.compute()
+    print(f"Training Accuracy for backend {args.dynamo_backend}: {eval_train_metric}")
 
     model.eval()
     start_time = time.time()
@@ -223,7 +234,7 @@ def main():
             outputs = model(**batch)
         predictions = outputs.logits.argmax(dim=-1) if not is_regression else outputs.logits.squeeze()
         predictions, references = accelerator.gather_for_metrics((predictions, batch["labels"]))
-        metric.add_batch(predictions=predictions, references=references)
+        test_metric.add_batch(predictions=predictions, references=references)
 
         if step == 0:
             first_step_time = time.time() - start_time
@@ -233,8 +244,8 @@ def main():
     print(f"First iteration took: {first_step_time:.2f}s")
     print(f"Average time after the first iteration: {avg_iteration_time * 1000:.2f}ms")
 
-    eval_metric = metric.compute()
-    print(f"Result: {eval_metric}")
+    eval_test_metric = test_metric.compute()
+    print(f"Test Accuracy for backend {args.dynamo_backend}: {eval_test_metric}")
 
 if __name__ == "__main__":
     main()
