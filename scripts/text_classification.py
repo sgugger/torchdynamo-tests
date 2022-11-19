@@ -196,8 +196,7 @@ def main():
     )
 
     # Get the metric function
-    train_metric = evaluate.load("glue", args.task_name)
-    test_metric = evaluate.load("glue", args.task_name)
+    metric = evaluate.load("glue", args.task_name)
     # Train!
     # Only show the progress bar once on each machine.
     train_steps = len(train_dataloader) * args.num_epochs
@@ -210,7 +209,7 @@ def main():
             outputs = model(**batch)
             loss = outputs.loss
             predictions, references = accelerator.gather_for_metrics((outputs.logits.argmax(dim=-1), batch["labels"]))
-            train_metric.add_batch(predictions=predictions, references=references)
+            metric.add_batch(predictions=predictions, references=references)
             accelerator.backward(loss)
             optimizer.step()
             lr_scheduler.step()
@@ -224,7 +223,7 @@ def main():
     print("Training finished.")
     print(f"First iteration took: {first_step_time:.2f}s")
     print(f"Average time after the first iteration: {avg_iteration_time * 1000:.2f}ms")
-    eval_train_metric = train_metric.compute()
+    eval_train_metric = metric.compute()
     print(f"Training Accuracy for backend {args.dynamo_backend}: {eval_train_metric}")
 
     model.eval()
@@ -234,7 +233,7 @@ def main():
             outputs = model(**batch)
         predictions = outputs.logits.argmax(dim=-1) if not is_regression else outputs.logits.squeeze()
         predictions, references = accelerator.gather_for_metrics((predictions, batch["labels"]))
-        test_metric.add_batch(predictions=predictions, references=references)
+        metric.add_batch(predictions=predictions, references=references)
 
         if step == 0:
             first_step_time = time.time() - start_time
@@ -244,7 +243,7 @@ def main():
     print(f"First iteration took: {first_step_time:.2f}s")
     print(f"Average time after the first iteration: {avg_iteration_time * 1000:.2f}ms")
 
-    eval_test_metric = test_metric.compute()
+    eval_test_metric = metric.compute()
     print(f"Test Accuracy for backend {args.dynamo_backend}: {eval_test_metric}")
 
 if __name__ == "__main__":
