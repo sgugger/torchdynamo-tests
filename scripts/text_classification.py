@@ -214,14 +214,15 @@ def main():
             progress_bar.update(1)
             if step == 0 and epoch == 0:
                 first_step_time = time.time() - start_time
+        
+        eval_train_metric = metric.compute()
+        print(f"Training Accuracy for backend {args.dynamo_backend} at epoch {epoch}: {eval_train_metric}")
     
     total_training_time = time.time() - start_time
     avg_iteration_time = (total_training_time - first_step_time) / (train_steps - 1)
     print("Training finished.")
     print(f"First iteration took: {first_step_time:.2f}s")
     print(f"Average time after the first iteration: {avg_iteration_time * 1000:.2f}ms")
-    eval_train_metric = metric.compute()
-    print(f"Training Accuracy for backend {args.dynamo_backend}: {eval_train_metric}")
 
     model.eval()
     start_time = time.time()
