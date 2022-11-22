@@ -91,6 +91,7 @@ def parse_args():
     parser.add_argument("--num_epochs", type=int, default=3, help="Total number of training epochs to perform.")
     parser.add_argument("--seed", type=int, default=0, help="A seed for reproducible training.")
     parser.add_argument("--dynamo_backend", type=str, default="no", help="Dynamo backend")
+    parser.add_argument("--mixed_precision", type=str, default="no", help="`no` or `fp16`")
     args = parser.parse_args()
     return args
 
@@ -98,7 +99,7 @@ def parse_args():
 def main():
     args = parse_args()
     set_seed(args.seed)
-    accelerator = Accelerator(dynamo_backend=args.dynamo_backend)
+    accelerator = Accelerator(dynamo_backend=args.dynamo_backend, mixed_precision=args.mixed_precision)
 
     # Make one log on every process with the configuration for debugging.
     logging.basicConfig(
@@ -253,6 +254,7 @@ def main():
     print(f"Test Perplexity for backend {args.dynamo_backend}: {test_perplexity}")
     out_dict = {
         "backend": args.dynamo_backend,
+        "mixed_precision": args.mixed_precision,
         "num_epochs": str(args.num_epochs),
         "seed": str(args.seed),
         "train_perplexity": str(train_perplexity.item()),
@@ -260,8 +262,12 @@ def main():
         "test_perplexity": str(test_perplexity.item()),
         "avg_test_time": str(avg_test_iteration_time * 1000),
     }
-    with open("language_modeling_task_results.csv", "a") as fd:
-        fd.write("\n")
+    with open("language_modeling_task_results.csv", "a+") as fd:
+        fd.seek(0)
+        if len(fd.read(1)) == 0:
+            fd.write(",".join(out_dict.keys()) + "\n")
+        else:
+            fd.write("\n")
         fd.write(",".join(out_dict.values()))
 
 
