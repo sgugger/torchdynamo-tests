@@ -118,29 +118,12 @@ def main():
         transformers.utils.logging.set_verbosity_error()
 
     dataset = load_dataset(args.dataset_name, task="image-classification")
-
-    # Prepare label mappings.
-    # We'll include these in the model's config to get human readable labels in the Inference API.
-    labels = dataset["train"].features["labels"].names
-    label2id = {label: str(i) for i, label in enumerate(labels)}
-    id2label = {str(i): label for i, label in enumerate(labels)}
-
-    # Load pretrained model and feature extractor
-    #
-    # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
-    config = AutoConfig.from_pretrained(
-        args.model_name_or_path,
-        num_labels=len(labels),
-        i2label=id2label,
-        label2id=label2id,
-        finetuning_task="image-classification",
-    )
     feature_extractor = AutoFeatureExtractor.from_pretrained(args.model_name_or_path)
     model = AutoModelForImageClassification.from_pretrained(
         args.model_name_or_path,
         from_tf=bool(".ckpt" in args.model_name_or_path),
-        config=config,
+        num_labels=len(dataset["train"].features["labels"].names),
+        finetuning_task="image-classification",
         ignore_mismatched_sizes=True,
     )
 
