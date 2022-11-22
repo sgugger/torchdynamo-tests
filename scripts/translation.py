@@ -44,6 +44,7 @@ from transformers import (
     get_scheduler,
 )
 
+torch.backends.cuda.matmul.allow_tf32 = True
 logger = get_logger(__name__)
 
 

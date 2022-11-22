@@ -43,22 +43,14 @@ from accelerate.logging import get_logger
 from accelerate.utils import set_seed
 from huggingface_hub import Repository
 from transformers import (
-    AutoConfig,
     AutoFeatureExtractor,
     AutoModelForImageClassification,
-    SchedulerType,
     get_scheduler,
 )
-from transformers.utils import check_min_version, get_full_repo_name, send_example_telemetry
-from transformers.utils.versions import require_version
 
 
-# Will error if the minimal version of Transformers is not installed. Remove at your own risks.
-check_min_version("4.25.0.dev0")
-
+torch.backends.cuda.matmul.allow_tf32 = True
 logger = get_logger(__name__)
-
-require_version("datasets>=2.0.0", "To fix: pip install -r examples/pytorch/image-classification/requirements.txt")
 
 
 def parse_args():

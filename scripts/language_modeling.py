@@ -39,27 +39,15 @@ import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed
-from huggingface_hub import Repository
 from transformers import (
-    MODEL_MAPPING,
     AutoModelForCausalLM,
     AutoTokenizer,
     default_data_collator,
     get_scheduler,
 )
-from transformers.utils import check_min_version
-from transformers.utils.versions import require_version
 
-
-# Will error if the minimal version of Transformers is not installed. Remove at your own risks.
-check_min_version("4.25.0.dev0")
-
+torch.backends.cuda.matmul.allow_tf32 = True
 logger = get_logger(__name__)
-
-require_version("datasets>=1.8.0", "To fix: pip install -r examples/pytorch/language-modeling/requirements.txt")
-
-MODEL_CONFIG_CLASSES = list(MODEL_MAPPING.keys())
-MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 
 def parse_args():
