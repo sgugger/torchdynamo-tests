@@ -67,7 +67,8 @@ accelerate launch scripts/language_modeling.py \
     --dataset_name wikitext \
     --dataset_config_name wikitext-2-raw-v1 \
     --model_name_or_path gpt2 \
-    --dynamo_backend inductor
+    --dynamo_backend inductor \
+    --mixed_precision fp16
 ```
 
 ### Vision Classification 
@@ -76,5 +77,6 @@ accelerate launch scripts/language_modeling.py \
 accelerate launch scripts/cv_classification.py \
     --model_name_or_path microsoft/resnet-18 \
     --dataset_name beans \
-    --dynamo_backend inductor
+    --dynamo_backend inductor \
+    --mixed_precision no
 ```
