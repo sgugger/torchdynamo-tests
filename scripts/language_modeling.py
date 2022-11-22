@@ -182,9 +182,11 @@ def main():
 
     # DataLoaders creation:
     train_dataloader = DataLoader(
-        train_dataset, shuffle=True, collate_fn=default_data_collator, batch_size=args.batch_size
+        train_dataset, shuffle=True, collate_fn=default_data_collator, batch_size=args.batch_size, drop_last=True
     )
-    eval_dataloader = DataLoader(eval_dataset, collate_fn=default_data_collator, batch_size=args.batch_size)
+    eval_dataloader = DataLoader(
+        eval_dataset, collate_fn=default_data_collator, batch_size=args.batch_size, drop_last=True
+    )
 
     # Optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)

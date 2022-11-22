@@ -121,9 +121,7 @@ def main():
     feature_extractor = AutoFeatureExtractor.from_pretrained(args.model_name_or_path)
     model = AutoModelForImageClassification.from_pretrained(
         args.model_name_or_path,
-        from_tf=bool(".ckpt" in args.model_name_or_path),
         num_labels=len(dataset["train"].features["labels"].names),
-        finetuning_task="image-classification",
         ignore_mismatched_sizes=True,
     )
 
@@ -176,8 +174,10 @@ def main():
         labels = torch.tensor([example["labels"] for example in examples])
         return {"pixel_values": pixel_values, "labels": labels}
 
-    train_dataloader = DataLoader(train_dataset, shuffle=True, collate_fn=collate_fn, batch_size=args.batch_size)
-    eval_dataloader = DataLoader(eval_dataset, collate_fn=collate_fn, batch_size=args.batch_size)
+    train_dataloader = DataLoader(
+        train_dataset, shuffle=True, collate_fn=collate_fn, batch_size=args.batch_size, drop_last=True
+    )
+    eval_dataloader = DataLoader(eval_dataset, collate_fn=collate_fn, batch_size=args.batch_size, drop_last=True)
 
     # Optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
