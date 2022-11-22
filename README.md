@@ -58,3 +58,23 @@ accelerate launch --config_file configs/base_fp32.yaml scripts/text_classificati
 ```
 
 and change the config file to one of the four options in `configs` to get the four squares.
+
+
+### Language Modeling
+
+```bash
+accelerate launch scripts/language_modelling.py \
+    --dynamo_backend inductor \
+    --dataset_name wikitext \
+    --dataset_config_name wikitext-2-raw-v1 \
+    --model_name_or_path gpt2
+```
+
+### Vision Classification 
+
+```bash
+accelerate launch scripts/language_modelling.py \
+    --dynamo_backend inductor \
+    --model_name_or_path microsoft/resnet-18\
+    --model_name_or_path gpt2
+```
