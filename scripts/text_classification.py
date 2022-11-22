@@ -99,7 +99,7 @@ def parse_args():
         default=0,
         help="random seed for torch"
     )
-
+    parser.add_argument("--mixed_precision", type=str, default="no", help="`no` or `fp16`")
     args = parser.parse_args()
     return args
 
@@ -107,7 +107,7 @@ def parse_args():
 def main():
     args = parse_args()
     torch.manual_seed(args.seed)
-    accelerator = Accelerator(dynamo_backend=args.dynamo_backend)
+    accelerator = Accelerator(dynamo_backend=args.dynamo_backend, mixed_precision=args.mixed_precision)
 
     # Make one log on every process with the configuration for debugging.
     logging.basicConfig(
@@ -217,10 +217,10 @@ def main():
         print(f"Training Accuracy for backend {args.dynamo_backend} at epoch {epoch}: {eval_train_metric}")
     
     total_training_time = time.time() - start_time
-    avg_iteration_time = (total_training_time - first_step_time) / (train_steps - 1)
+    avg_train_iteration_time = (total_training_time - first_step_time) / (train_steps - 1)
     print("Training finished.")
     print(f"First iteration took: {first_step_time:.2f}s")
-    print(f"Average time after the first iteration: {avg_iteration_time * 1000:.2f}ms")
+    print(f"Average time after the first iteration: {avg_train_iteration_time * 1000:.2f}ms")
 
     model.eval()
     start_time = time.time()
@@ -234,13 +234,33 @@ def main():
         if step == 0:
             first_step_time = time.time() - start_time
     total_eval_time = time.time() - start_time
-    avg_iteration_time = (total_eval_time - first_step_time) / (len(eval_dataloader) - 1)
+    avg_test_iteration_time = (total_eval_time - first_step_time) / (len(eval_dataloader) - 1)
     print("Evaluation finished.")
     print(f"First iteration took: {first_step_time:.2f}s")
-    print(f"Average time after the first iteration: {avg_iteration_time * 1000:.2f}ms")
+    print(f"Average time after the first iteration: {avg_test_iteration_time * 1000:.2f}ms")
 
     eval_test_metric = metric.compute()
     print(f"Test Accuracy for backend {args.dynamo_backend}: {eval_test_metric}")
+
+    out_dict = {
+        "backend": args.dynamo_backend,
+        "mixed_precision": args.mixed_precision,
+        "num_epochs": str(args.num_epochs),
+        "seed": str(args.seed),
+        "train_acc" : str(eval_train_metric["accuracy"]),
+        "train_f1" : str(eval_train_metric["f1"]),
+        "avg_train_time" : str(avg_train_iteration_time * 1000),
+        "test_acc" : str(eval_test_metric["accuracy"]),
+        "test_f1" : str(eval_test_metric["f1"]),
+        "avg_test_time" : str(avg_test_iteration_time * 1000),
+    }
+    with open("text_classification_results.csv", "a+") as fd:
+        fd.seek(0)
+        if len(fd.read(1)) == 0:
+            fd.write(",".join(out_dict.keys()) + "\n")
+        else:
+            fd.write("\n")
+        fd.write(",".join(out_dict.values()))
 
 
 if __name__ == "__main__":
