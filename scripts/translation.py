@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 # coding=utf-8
-# Copyright 2021 The HuggingFace Inc. team. All rights reserved.
+# Copyright The HuggingFace Team and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +13,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Finetuning a 🤗 Transformers model for sequence classification on GLUE."""
+"""
+Fine-tuning a 🤗 Transformers model on text translation.
+"""
+# You can also adapt this script on your own text translation task. Pointers for this are left as comments.
+
 import argparse
 import logging
+import random
 import time
 
 import datasets
+import numpy as np
 import torch
 from datasets import load_dataset
 from torch.utils.data import DataLoader
@@ -28,37 +35,27 @@ import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from transformers import (
-    AutoModelForSequenceClassification,
+    AutoModelForSeq2SeqLM,
     AutoTokenizer,
-    DataCollatorWithPadding,
+    DataCollatorForSeq2Seq,
+    MBartTokenizer,
+    MBartTokenizerFast,
     default_data_collator,
     get_scheduler,
 )
 
-torch.backends.cuda.matmul.allow_tf32 = True
 logger = get_logger(__name__)
 
-task_to_keys = {
-    "cola": ("sentence", None),
-    "mnli": ("premise", "hypothesis"),
-    "mrpc": ("sentence1", "sentence2"),
-    "qnli": ("question", "sentence"),
-    "qqp": ("question1", "question2"),
-    "rte": ("sentence1", "sentence2"),
-    "sst2": ("sentence", None),
-    "stsb": ("sentence1", "sentence2"),
-    "wnli": ("sentence1", "sentence2"),
-}
 
-
+# Parsing input arguments
 def parse_args():
+
     parser = argparse.ArgumentParser(description="Finetune a transformers model on a text classification task")
     parser.add_argument(
-        "--task_name",
+        "--model_name_or_path",
         type=str,
-        default=None,
-        help="The name of the glue task to train on.",
-        choices=list(task_to_keys.keys()),
+        help="Path to pretrained model or model identifier from huggingface.co/models.",
+        default="t5-small",
     )
     parser.add_argument(
         "--max_length",
@@ -75,12 +72,6 @@ def parse_args():
         help="If passed, pad all samples to `max_length`. Otherwise, dynamic padding is used.",
     )
     parser.add_argument(
-        "--model_name_or_path",
-        type=str,
-        help="Path to pretrained model or model identifier from huggingface.co/models.",
-        default="bert-base-cased",
-    )
-    parser.add_argument(
         "--batch_size",
         type=int,
         default=16,
@@ -89,25 +80,19 @@ def parse_args():
     parser.add_argument(
         "--num_epochs",
         type=int,
-        default=3,
+        default=1,
         help="Number of training epochs.",
     )
+    parser.add_argument("--seed", type=int, default=0, help="A seed for reproducible training.")
     parser.add_argument("--dynamo_backend", type=str, default="no", help="Dynamo backend")
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=0,
-        help="random seed for torch"
-    )
-
-    args = parser.parse_args()
-    return args
+    parser.add_argument("--mixed_precision", type=str, default="no", help="`no` or `fp16`")
+    return parser.parse_args()
 
 
 def main():
     args = parse_args()
     torch.manual_seed(args.seed)
-    accelerator = Accelerator(dynamo_backend=args.dynamo_backend)
+    accelerator = Accelerator(dynamo_backend=args.dynamo_backend, mixed_precision=args.mixed_precision)
 
     # Make one log on every process with the configuration for debugging.
     logging.basicConfig(
@@ -124,31 +109,45 @@ def main():
         transformers.utils.logging.set_verbosity_error()
 
     # Load data
-    raw_datasets = load_dataset("glue", args.task_name)
-
-    is_regression = args.task_name == "stsb"
-    if not is_regression:
-        label_list = raw_datasets["train"].features["label"].names
-        num_labels = len(label_list)
-    else:
-        num_labels = 1
+    raw_datasets = load_dataset("wmt16", "ro-en")
 
     # Load pretrained model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
-    model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, num_labels=num_labels)
+    model = AutoModelForSeq2SeqLM.from_pretrained(args.model_name_or_path)
 
-    # Preprocessing the datasets
-    sentence1_key, sentence2_key = task_to_keys[args.task_name]
+    # MBART requires some language codes
+    if isinstance(tokenizer, (MBartTokenizer, MBartTokenizerFast)):
+        tokenizer.src_lang = "en_XX"
+        tokenizer.tgt_lang = "ro_RO"
+        if model.config.decoder_start_token_id is None:
+            if isinstance(tokenizer, MBartTokenizer):
+                model.config.decoder_start_token_id = tokenizer.lang_code_to_id["ro_RO"]
+            else:
+                model.config.decoder_start_token_id = tokenizer.convert_tokens_to_ids("ro_RO")
+
+    # T5 requires a prefix
+    if args.model_name_or_path in ["t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b"]:
+        prefix = "translate English to Romanian: "
+    else:
+        prefix = ""
+
+    # Preprocessing the datasets.
     padding = False if args.dynamic_length else "max_length"
-
     def preprocess_function(examples):
-        # Tokenize the texts
-        texts = (
-            (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
-        )
-        result = tokenizer(*texts, padding=padding, max_length=args.max_length, truncation=True)
-        result["labels"] = examples["label"]
-        return result
+        inputs = [ex["en"] for ex in examples["translation"]]
+        targets = [ex["ro"] for ex in examples["translation"]]
+        inputs = [prefix + inp for inp in inputs]
+        model_inputs = tokenizer(inputs, text_target=targets, max_length=args.max_length, padding=padding, truncation=True)
+
+        
+        # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
+        # padding in the loss.
+        if padding == "max_length":
+            model_inputs["labels"] = [
+                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in model_inputs["labels"]
+            ]
+
+        return model_inputs
 
     with accelerator.main_process_first():
         processed_datasets = raw_datasets.map(
@@ -159,13 +158,22 @@ def main():
         )
 
     train_dataset = processed_datasets["train"]
-    eval_dataset = processed_datasets["validation_matched" if args.task_name == "mnli" else "validation"]
+    eval_dataset = processed_datasets["validation"]
+
+    # Log a few random samples from the training set:
+    for index in random.sample(range(len(train_dataset)), 3):
+        logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
 
     # DataLoaders creation:
     if not args.dynamic_length:
         data_collator = default_data_collator
     else:
-        data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
+        data_collator = DataCollatorForSeq2Seq(
+            tokenizer,
+            model=model,
+            label_pad_token_id=-100,
+            pad_to_multiple_of=8,
+        )
 
     train_dataloader = DataLoader(
         train_dataset, shuffle=True, collate_fn=data_collator, batch_size=args.batch_size, drop_last=True
@@ -190,21 +198,26 @@ def main():
         model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
     )
 
-    # Get the metric function
-    metric = evaluate.load("glue", args.task_name)
+    # Metric
+    metric = evaluate.load("sacrebleu")
+    def postprocess_text(preds, labels):
+        preds = [pred.strip() for pred in preds]
+        labels = [[label.strip()] for label in labels]
+
+        return preds, labels
+
     # Train!
     # Only show the progress bar once on each machine.
-    train_steps = len(train_dataloader) * args.num_epochs
+    train_steps = min(len(train_dataloader) * args.num_epochs, 1000)
     progress_bar = tqdm(range(train_steps), disable=not accelerator.is_local_main_process)
     start_time = time.time()
+    
     for epoch in range(args.num_epochs):
         model.train()
         for step, batch in enumerate(train_dataloader):
             # We need to skip steps until we reach the resumed step
             outputs = model(**batch)
             loss = outputs.loss
-            predictions, references = accelerator.gather_for_metrics((outputs.logits.argmax(dim=-1), batch["labels"]))
-            metric.add_batch(predictions=predictions, references=references)
             accelerator.backward(loss)
             optimizer.step()
             lr_scheduler.step()
@@ -212,10 +225,9 @@ def main():
             progress_bar.update(1)
             if step == 0 and epoch == 0:
                 first_step_time = time.time() - start_time
+            elif step >= 1000:
+                break
         
-        eval_train_metric = metric.compute()
-        print(f"Training Accuracy for backend {args.dynamo_backend} at epoch {epoch}: {eval_train_metric}")
-    
     total_training_time = time.time() - start_time
     avg_iteration_time = (total_training_time - first_step_time) / (train_steps - 1)
     print("Training finished.")
@@ -226,22 +238,41 @@ def main():
     start_time = time.time()
     for step, batch in enumerate(eval_dataloader):
         with torch.no_grad():
-            outputs = model(**batch)
-        predictions = outputs.logits.argmax(dim=-1) if not is_regression else outputs.logits.squeeze()
-        predictions, references = accelerator.gather_for_metrics((predictions, batch["labels"]))
-        metric.add_batch(predictions=predictions, references=references)
+            generated_tokens = accelerator.unwrap_model(model).generate(
+                batch["input_ids"], attention_mask=batch["attention_mask"], max_length=args.max_length
+            )
+            generated_tokens = accelerator.pad_across_processes(
+                generated_tokens, dim=1, pad_index=tokenizer.pad_token_id
+            )
+            labels = batch["labels"]
+            if args.dynamic_length:
+                labels = accelerator.pad_across_processes(batch["labels"], dim=1, pad_index=tokenizer.pad_token_id)
 
-        if step == 0:
-            first_step_time = time.time() - start_time
+            generated_tokens = accelerator.gather(generated_tokens).cpu().numpy()
+            labels = accelerator.gather(labels).cpu().numpy()
+
+            # Replace -100 in the labels as we can't decode them.
+            labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+
+            decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+            decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+            decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+
+            metric.add_batch(predictions=decoded_preds, references=decoded_labels)
+            if step == 0:
+                first_step_time = time.time() - start_time
+
     total_eval_time = time.time() - start_time
     avg_iteration_time = (total_eval_time - first_step_time) / (len(eval_dataloader) - 1)
+        
     print("Evaluation finished.")
     print(f"First iteration took: {first_step_time:.2f}s")
     print(f"Average time after the first iteration: {avg_iteration_time * 1000:.2f}ms")
 
-    eval_test_metric = metric.compute()
-    print(f"Test Accuracy for backend {args.dynamo_backend}: {eval_test_metric}")
-
+    eval_metric = metric.compute()
+    print(f"Test BLEU score for backend {args.dynamo_backend}: {eval_metric['score']}")
+        
 
 if __name__ == "__main__":
     main()
