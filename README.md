@@ -63,7 +63,7 @@ and change the config file to one of the four options in `configs` to get the fo
 ### Language Modeling
 
 ```bash
-accelerate launch scripts/language_modelling.py \
+accelerate launch scripts/language_modeling.py \
     --dynamo_backend inductor \
     --dataset_name wikitext \
     --dataset_config_name wikitext-2-raw-v1 \
@@ -73,7 +73,7 @@ accelerate launch scripts/language_modelling.py \
 ### Vision Classification 
 
 ```bash
-accelerate launch scripts/language_modelling.py \
+accelerate launch scripts/cv_classification.py \
     --dynamo_backend inductor \
     --model_name_or_path microsoft/resnet-18\
     --model_name_or_path gpt2
