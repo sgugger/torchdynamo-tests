@@ -253,9 +253,9 @@ def main():
         "backend": args.dynamo_backend,
         "num_epochs": str(args.num_epochs),
         "seed": str(args.seed),
-        "train_perplexity": str(train_perplexity),
+        "train_perplexity": str(train_perplexity.item()),
         "avg_train_time": str(avg_train_iteration_time * 1000),
-        "test_perplexity": str(test_perplexity),
+        "test_perplexity": str(test_perplexity.item()),
         "avg_test_time": str(avg_test_iteration_time * 1000),
     }
     with open("language_modeling_task_results.csv", "a") as fd:

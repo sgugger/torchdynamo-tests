@@ -92,6 +92,7 @@ def parse_args():
     )
     parser.add_argument("--num_epochs", type=int, default=3, help="Total number of training epochs to perform.")
     parser.add_argument("--seed", type=int, default=0, help="A seed for reproducible training.")
+    parser.add_argument("--dynamo_backend", type=str, default="no", help="Dynamo backend")
     args = parser.parse_args()
     return args
 
@@ -140,7 +141,7 @@ def main():
         args.model_name_or_path,
         from_tf=bool(".ckpt" in args.model_name_or_path),
         config=config,
-        ignore_mismatched_sizes=args.ignore_mismatched_sizes,
+        ignore_mismatched_sizes=True,
     )
 
     # Preprocessing the datasets
@@ -192,10 +193,8 @@ def main():
         labels = torch.tensor([example["labels"] for example in examples])
         return {"pixel_values": pixel_values, "labels": labels}
 
-    train_dataloader = DataLoader(
-        train_dataset, shuffle=True, collate_fn=collate_fn, batch_size=args.per_device_train_batch_size
-    )
-    eval_dataloader = DataLoader(eval_dataset, collate_fn=collate_fn, batch_size=args.per_device_eval_batch_size)
+    train_dataloader = DataLoader(train_dataset, shuffle=True, collate_fn=collate_fn, batch_size=args.batch_size)
+    eval_dataloader = DataLoader(eval_dataset, collate_fn=collate_fn, batch_size=args.batch_size)
 
     # Optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
@@ -270,10 +269,8 @@ def main():
         "num_epochs": str(args.num_epochs),
         "seed": str(args.seed),
         "train_acc": str(eval_train_metric["accuracy"]),
-        "train_f1": str(eval_train_metric["f1"]),
         "avg_train_time": str(avg_train_iteration_time * 1000),
         "test_acc": str(eval_test_metric["accuracy"]),
-        "test_f1": str(eval_test_metric["f1"]),
         "avg_test_time": str(avg_test_iteration_time * 1000),
     }
 

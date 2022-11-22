@@ -75,5 +75,6 @@ accelerate launch scripts/language_modeling.py \
 ```bash
 accelerate launch scripts/cv_classification.py \
     --model_name_or_path microsoft/resnet-18 \
+    --dataset_name beans \
     --dynamo_backend inductor
 ```
