@@ -129,7 +129,7 @@ def main():
                 split=f"train[{args.validation_split_percentage}%:]",
             )
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=not args.use_slow_tokenizer)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
     model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path)
 
     # Preprocessing the datasets.
@@ -144,9 +144,9 @@ def main():
         tokenized_datasets = raw_datasets.map(
             tokenize_function,
             batched=True,
-            num_proc=args.preprocessing_num_workers,
+            num_proc=4,
             remove_columns=column_names,
-            load_from_cache_file=not args.overwrite_cache,
+            load_from_cache_file=False,
             desc="Running tokenizer on dataset",
         )
     block_size = tokenizer.model_max_length
@@ -172,8 +172,8 @@ def main():
         lm_datasets = tokenized_datasets.map(
             group_texts,
             batched=True,
-            num_proc=args.preprocessing_num_workers,
-            load_from_cache_file=not args.overwrite_cache,
+            num_proc=4,
+            load_from_cache_file=False,
             desc=f"Grouping texts in chunks of {block_size}",
         )
 
@@ -210,8 +210,7 @@ def main():
     start_time = time.time()
     for epoch in range(args.num_epochs):
         model.train()
-        if args.with_tracking:
-            total_loss = 0
+        total_loss = 0
         for step, batch in enumerate(train_dataloader):
             outputs = model(**batch)
             loss = outputs.loss
