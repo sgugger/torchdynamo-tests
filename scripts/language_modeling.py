@@ -83,7 +83,7 @@ def parse_args():
         required=False,
     )
     parser.add_argument(
-        "batch_size",
+        "--batch_size",
         type=int,
         default=8,
         help="Batch size (per device) for the training dataloader.",
