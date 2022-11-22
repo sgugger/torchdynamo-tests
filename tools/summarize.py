@@ -51,11 +51,11 @@ def get_diff_percentage(df):
 
         for i, column in enumerate(columns):
             if "time" in column:
-                diff_percentage[column].append(
+                diff_percentage[f"{column}_speedup"].append(
                     str(round((pytorch_backend_values[i] / inductor_backend_values[i]), 2)) + "x"
                 )
             else:
-                diff_percentage[column].append(
+                diff_percentage[f"{column}_diff%"].append(
                     str(round((100 * (inductor_backend_values[i] / pytorch_backend_values[i] - 1)), 2)) + "%"
                 )
     return pd.DataFrame(diff_percentage)
