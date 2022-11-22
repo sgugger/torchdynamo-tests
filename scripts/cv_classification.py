@@ -91,7 +91,7 @@ def parse_args():
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument("--num_epochs", type=int, default=3, help="Total number of training epochs to perform.")
-    parser.add_argument("--seed", type=int, default=None, help="A seed for reproducible training.")
+    parser.add_argument("--seed", type=int, default=0, help="A seed for reproducible training.")
     args = parser.parse_args()
     return args
 
