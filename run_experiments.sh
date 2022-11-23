@@ -24,11 +24,11 @@ else
     echo "task_name = $2"
 fi
 
-model_name_or_path = $1
-num_runs = $2
-task_name = $3
+model_name_or_path=$1
+num_runs=$2
+task_name=$3
 
-for i in {0.. $num_runs }
+for ((i = 1; i <= $num_runs; i++));
 do
     echo "experiment run $i"
     
@@ -124,6 +124,3 @@ do
             ;;
     esac
 done
-
-
-

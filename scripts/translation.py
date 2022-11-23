@@ -134,13 +134,15 @@ def main():
 
     # Preprocessing the datasets.
     padding = False if args.dynamic_length else "max_length"
+
     def preprocess_function(examples):
         inputs = [ex["en"] for ex in examples["translation"]]
         targets = [ex["ro"] for ex in examples["translation"]]
         inputs = [prefix + inp for inp in inputs]
-        model_inputs = tokenizer(inputs, text_target=targets, max_length=args.max_length, padding=padding, truncation=True)
+        model_inputs = tokenizer(
+            inputs, text_target=targets, max_length=args.max_length, padding=padding, truncation=True
+        )
 
-        
         # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
         # padding in the loss.
         if padding == "max_length":
@@ -201,6 +203,7 @@ def main():
 
     # Metric
     metric = evaluate.load("sacrebleu")
+
     def postprocess_text(preds, labels):
         preds = [pred.strip() for pred in preds]
         labels = [[label.strip()] for label in labels]
@@ -212,7 +215,7 @@ def main():
     train_steps = min(len(train_dataloader) * args.num_epochs, 1000)
     progress_bar = tqdm(range(train_steps), disable=not accelerator.is_local_main_process)
     start_time = time.time()
-    
+
     for epoch in range(args.num_epochs):
         model.train()
         for step, batch in enumerate(train_dataloader):
@@ -228,7 +231,7 @@ def main():
                 first_step_time = time.time() - start_time
             elif step >= 1000:
                 break
-        
+
     total_training_time = time.time() - start_time
     avg_iteration_time = (total_training_time - first_step_time) / (train_steps - 1)
     print("Training finished.")
@@ -266,14 +269,14 @@ def main():
 
     total_eval_time = time.time() - start_time
     avg_iteration_time = (total_eval_time - first_step_time) / (len(eval_dataloader) - 1)
-        
+
     print("Evaluation finished.")
     print(f"First iteration took: {first_step_time:.2f}s")
     print(f"Average time after the first iteration: {avg_iteration_time * 1000:.2f}ms")
 
     eval_metric = metric.compute()
     print(f"Test BLEU score for backend {args.dynamo_backend}: {eval_metric['score']}")
-        
+
 
 if __name__ == "__main__":
     main()

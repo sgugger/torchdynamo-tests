@@ -249,7 +249,8 @@ def main():
         "test_f1": str(eval_test_metric["f1"]),
         "avg_test_time": str(avg_test_iteration_time * 1000),
     }
-    with open(f"{args.model_name_or_path}_text_classification_results.csv", "a+") as fd:
+    prefix = args.model_name_or_path.split("/")[-1]
+    with open(f"{prefix}_text_classification_results.csv", "a+") as fd:
         fd.seek(0)
         if len(fd.read(1)) == 0:
             fd.write(",".join(out_dict.keys()) + "\n")
