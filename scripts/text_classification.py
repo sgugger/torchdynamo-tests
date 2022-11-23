@@ -93,12 +93,7 @@ def parse_args():
         help="Number of training epochs.",
     )
     parser.add_argument("--dynamo_backend", type=str, default="no", help="Dynamo backend")
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=0,
-        help="random seed for torch"
-    )
+    parser.add_argument("--seed", type=int, default=0, help="random seed for torch")
     parser.add_argument("--mixed_precision", type=str, default="no", help="`no` or `fp16`")
     args = parser.parse_args()
     return args
@@ -212,10 +207,10 @@ def main():
             progress_bar.update(1)
             if step == 0 and epoch == 0:
                 first_step_time = time.time() - start_time
-        
+
         eval_train_metric = metric.compute()
         print(f"Training Accuracy for backend {args.dynamo_backend} at epoch {epoch}: {eval_train_metric}")
-    
+
     total_training_time = time.time() - start_time
     avg_train_iteration_time = (total_training_time - first_step_time) / (train_steps - 1)
     print("Training finished.")
@@ -247,14 +242,15 @@ def main():
         "mixed_precision": args.mixed_precision,
         "num_epochs": str(args.num_epochs),
         "seed": str(args.seed),
-        "train_acc" : str(eval_train_metric["accuracy"]),
-        "train_f1" : str(eval_train_metric["f1"]),
-        "avg_train_time" : str(avg_train_iteration_time * 1000),
-        "test_acc" : str(eval_test_metric["accuracy"]),
-        "test_f1" : str(eval_test_metric["f1"]),
-        "avg_test_time" : str(avg_test_iteration_time * 1000),
+        "train_acc": str(eval_train_metric["accuracy"]),
+        "train_f1": str(eval_train_metric["f1"]),
+        "avg_train_time": str(avg_train_iteration_time * 1000),
+        "test_acc": str(eval_test_metric["accuracy"]),
+        "test_f1": str(eval_test_metric["f1"]),
+        "avg_test_time": str(avg_test_iteration_time * 1000),
     }
-    with open("text_classification_results.csv", "a+") as fd:
+    prefix = args.model_name_or_path.split("/")[-1]
+    with open(f"{prefix}_text_classification_results.csv", "a+") as fd:
         fd.seek(0)
         if len(fd.read(1)) == 0:
             fd.write(",".join(out_dict.keys()) + "\n")
